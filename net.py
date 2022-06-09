@@ -14,20 +14,16 @@ class Conv(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.flatten = nn.Flatten()
 
-        self.fc1 = nn.Linear(78, 200)
+        self.fc1 = nn.Linear(2328, 200)
         self.fc2 = nn.Linear(200, 100)
         self.fc3 = nn.Linear(100, 1)
 
     def forward(self, positions, atomic_number):
-        print(positions.shape)
         positions = F.relu(self.conv1(positions))
-        print(positions.shape)
         positions = F.relu(self.conv2(positions))
-        print(positions.shape)
         positions = self.flatten(positions)
         atomic_number = self.flatten(atomic_number)
 
-        print(positions.shape,atomic_number.shape)
         positions_cat = torch.cat((positions, atomic_number), 1)
 
         positions_cat = F.relu(self.fc1(positions_cat))
