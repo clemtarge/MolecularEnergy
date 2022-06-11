@@ -17,7 +17,7 @@ import pickle
 
 import pandas as pd
 
-from net import Conv
+from net_coulomb import Conv
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -30,9 +30,8 @@ class MyDataset(Dataset):
     
         self.is_test = is_test
         self.x_pos = df.iloc[start_split:end_split,0].values
-        self.x_num = df.iloc[start_split:end_split,2].values
         if not self.is_test:
-            y_df = df.iloc[start_split:end_split,3].values
+            y_df = df.iloc[start_split:end_split,1].values
             if y_min is None:
                 self.y_min = np.min(y_df)
             else: 
@@ -47,8 +46,7 @@ class MyDataset(Dataset):
         return len(self.x_pos)
    
     def __getitem__(self,idx):
-        return_array = [torch.tensor([self.x_pos[idx]],dtype=torch.float32), 
-                        torch.tensor([self.x_num[idx]],dtype=torch.float32)]
+        return_array = [torch.tensor([self.x_pos[idx].reshape(23,23)],dtype=torch.float32)]
         if not self.is_test:
             return_array.append(torch.tensor([self.y[idx]],dtype=torch.float32))
         return return_array
@@ -58,9 +56,9 @@ def train(net, optimizer, loader, epochs=10):#, writer, epochs=10):
     for epoch in range(epochs):
         running_loss = []
         t = tqdm(loader)
-        for x_pos, x_num, y in t:
-            x_pos, x_num, y = x_pos.to(device), x_num.to(device), y.to(device)
-            outputs = net(x_pos, x_num)
+        for x_pos, y in t:
+            x_pos, y = x_pos.to(device), y.to(device)
+            outputs = net(x_pos)
             loss = criterion(outputs, y)
             running_loss.append(loss.item())
             optimizer.zero_grad()
@@ -72,9 +70,9 @@ def train(net, optimizer, loader, epochs=10):#, writer, epochs=10):
 def test(model, dataloader):
     cur_MSE = 0
     with torch.no_grad():
-        for x_pos, x_num, y in dataloader:
-            x_pos, x_num, y = x_pos.to(device), x_num.to(device), y.to(device)
-            y_hat = model(x_pos, x_num)
+        for x_pos, y in dataloader:
+            x_pos, y = x_pos.to(device), y.to(device)
+            y_hat = model(x_pos)
             cur_MSE += nn.MSELoss()(y_hat, y)
 
     return cur_MSE/len(dataloader)
@@ -83,9 +81,9 @@ def evaluate(model, dataloader, y_min, y_max, index_range = None):
 
     y_hat = []
     with torch.no_grad():
-        for x_pos, x_num in dataloader:
-            x_pos, x_num = x_pos.to(device), x_num.to(device)
-            y_hat += (model(x_pos, x_num)*(y_max - y_min) + y_min).detach().tolist()
+        for x_pos in dataloader:
+            x_pos = x_pos[0].to(device)
+            y_hat += (model(x_pos)*(y_max - y_min) + y_min).detach().tolist()
 
     if index_range is None:
         ids = range(len(y_hat))
@@ -113,10 +111,10 @@ if __name__=='__main__':
     lr = args.lr
 
     # datasets
-    traindata = MyDataset('train_preprocess.pkl', end_split=5336)
-    testdata = MyDataset('train_preprocess.pkl', start_split=5336, \
+    traindata = MyDataset('train_preprocess_coulomb.pkl', end_split=5336)
+    testdata = MyDataset('train_preprocess_coulomb.pkl', start_split=5336, \
                         y_min = traindata.y_min, y_max = traindata.y_max)
-    truetestdata = MyDataset('truetest_preprocess.pkl', is_test=True)
+    truetestdata = MyDataset('truetest_preprocess_coulomb.pkl', is_test=True)
 
     # dataloaders
     trainloader = DataLoader(traindata, batch_size=batch_size, shuffle=True)
