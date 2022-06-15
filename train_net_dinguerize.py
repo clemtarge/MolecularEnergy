@@ -26,7 +26,7 @@ class MyDataset(Dataset):
     def __init__(self,file_name, start_split = 0, end_split = -1, transform = None, is_test = False):
 
         with open(file_name, "rb") as file:
-            df = pickle.load(file)
+            df = pickle.load(file).sort_index()
     
         self.is_test = is_test
         self.x_pos = df.iloc[start_split:end_split,0].values
@@ -51,6 +51,8 @@ class MyDataset(Dataset):
         return_array = [self.transform(torch.tensor([self.x_pos[idx].reshape(23,23)],dtype=torch.float32))]
         if not self.is_test:
             return_array.append(torch.tensor([self.y[idx]],dtype=torch.float32))
+            
+        #print(return_array[0].shape)
         return return_array
 
 def train(net, optimizer, loader, epochs=10):#, writer, epochs=10):
@@ -66,7 +68,7 @@ def train(net, optimizer, loader, epochs=10):#, writer, epochs=10):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            t.set_description(f'epoch : {epoch:2d} | training loss: {mean(running_loss):.16f}')
+            t.set_description(f'epoch : {epoch:3d} | training loss: {mean(running_loss):4.16f}')
         #writer.add_scalar('training loss', mean(running_loss), epoch)
 
 def test(model, dataloader):
@@ -92,7 +94,7 @@ def evaluate(model, dataloader, index_range = None):
     else:
         ids = range(index_range[0],index_range[1]+1)
 
-    results = pd.DataFrame({"id": list(ids), "predicted": np.ravel(y_hat)[1:]})
+    results = pd.DataFrame({"id": list(ids), "predicted": np.ravel(y_hat)[1:-3]})
 
     return results
 
@@ -126,6 +128,7 @@ if __name__=='__main__':
 
     # setting net on device(GPU if available, else CPU)
     net = net.to(device)
+    print(f"Number of parameters : {sum(p.numel() for p in net.parameters())}")
     #optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
     optimizer = optim.Adam(net.parameters(), lr=lr)
 
@@ -135,7 +138,7 @@ if __name__=='__main__':
     torch.save(net.state_dict(), "mnist_net.pth")
 
 
-    truetestdata = evaluate(net, truetestloader, index_range=[6771,8462])
+    truetestdata = evaluate(net, truetestloader, index_range=[6774,8462])
 
     truetestdata.to_csv('truetest_pred.csv', index=False)
 
