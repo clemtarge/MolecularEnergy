@@ -14,13 +14,14 @@ class Conv(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.flatten = nn.Flatten()
 
-        self.fc1 = nn.Linear(2328, 200)
-        self.fc2 = nn.Linear(200, 100)
-        self.fc3 = nn.Linear(100, 1)
+        self.fc1 = nn.Linear(96, 128)
+        self.fc2 = nn.Linear(128, 256)
+        self.fc3 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(128, 1)
 
     def forward(self, positions, atomic_number):
-        positions = F.relu(self.conv1(positions))
-        positions = F.relu(self.conv2(positions))
+        # positions = F.relu(self.conv1(positions))
+        # positions = F.relu(self.conv2(positions))
         positions = self.flatten(positions)
         atomic_number = self.flatten(atomic_number)
 
@@ -30,7 +31,9 @@ class Conv(nn.Module):
         # positions = F.dropout(positions, 0.5) #dropout was included to combat overfitting
         positions_cat = F.relu(self.fc2(positions_cat))
         # positions = F.dropout(positions, 0.5)
-        positions_cat = self.fc3(positions_cat)
+        positions_cat = F.relu(self.fc3(positions_cat))
+        # positions = F.dropout(positions, 0.5)
+        positions_cat = self.fc4(positions_cat)
         return positions_cat
 
 
