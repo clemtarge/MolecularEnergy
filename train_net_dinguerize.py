@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
-from torch.utils.tensorboard import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 import numpy as np
@@ -55,13 +55,16 @@ class MyDataset(Dataset):
         #print(return_array[0].shape)
         return return_array
 
-def train(net, optimizer, trainloader, validationloader, epochs=10):#, writer, epochs=10):
+def train(net, optimizer, trainloader, validationloader, epochs=10, patience = None, successive_patience = 1):#, writer, epochs=10):
     criterion = nn.MSELoss()
+    validation_loss_array = []
+    nb_over_patience = 0
     for epoch in range(epochs):
         running_loss = []
         t = tqdm(trainloader)
         for idx, (x_pos, y) in enumerate(t):
             x_pos, y = x_pos.to(device), y.to(device)
+            x_pos = x_pos + 1e-6*torch.randn_like(x_pos)
             outputs = net(x_pos)
             loss = criterion(outputs, y)
             running_loss.append(loss.item())
@@ -75,6 +78,14 @@ def train(net, optimizer, trainloader, validationloader, epochs=10):#, writer, e
                 validation_MSE = test(net, validationloader)
                 t.set_description(f'epoch : {epoch:3d} | training loss: {mean(running_loss):11.6f} | validation loss: {validation_MSE:11.6f} | validation RMSE: {torch.sqrt(validation_MSE):11.6f}',refresh=True)
             #writer.add_scalar('training loss', mean(running_loss), epoch)
+        validation_loss_array.append(validation_MSE)
+        if patience is not None and epoch >= patience:
+            if validation_loss_array[-1] > validation_loss_array[-patience-1]:
+                nb_over_patience += 1
+                if nb_over_patience >= successive_patience:
+                    break
+            else:
+                nb_over_patience = 0
 
 def test(model, dataloader):
     cur_MSE = 0
@@ -122,7 +133,6 @@ if __name__=='__main__':
     # datasets
     traindata = MyDataset('train_preprocess_coulomb.pkl', end_split=5416)
     testdata = MyDataset('train_preprocess_coulomb.pkl', start_split=5416, end_split=6093, transform=traindata.transform)
-    #testdata = MyDataset('train_preprocess_coulomb.pkl', start_split=5416, transform=traindata.transform)
     validationdata = MyDataset('train_preprocess_coulomb.pkl', start_split=6093, transform=traindata.transform)
     truetestdata = MyDataset('truetest_preprocess_coulomb.pkl', transform=traindata.transform, is_test=True)
 
@@ -138,9 +148,9 @@ if __name__=='__main__':
     net = net.to(device)
     print(f"Number of parameters : {sum(p.numel() for p in net.parameters())}")
     #optimizer = optim.SGD(net.parameters(), lr=lr, momentum=0.9)
-    optimizer = optim.Adam(net.parameters(), lr=lr)
+    optimizer = optim.Adam(net.parameters(), lr=lr, weight_decay=1e-5)
 
-    train(net, optimizer, trainloader, validationloader, epochs)#, writer, epochs)
+    train(net, optimizer, trainloader, validationloader, epochs)#, patience=100, successive_patience = 5)#, writer, epochs)
     test_acc = test(net, testloader)
     print(f'Test accuracy:{torch.sqrt(test_acc)}')
     torch.save(net.state_dict(), "mnist_net.pth")

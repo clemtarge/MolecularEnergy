@@ -18,10 +18,10 @@ class Conv(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.flatten = nn.Flatten()
 
-        self.fc1 = nn.Linear(1600, 256)
+        self.fc1 = nn.Linear(33856, 600)
         self.fc15 = nn.Linear(256, 128)
         self.fc16 = nn.Linear(128, 64)
-        self.fc2 = nn.Linear(256, 1)
+        self.fc2 = nn.Linear(600, 1)
         # self.fc1 = nn.Linear(529, 1024)
         # self.fc2 = nn.Linear(1024, 512)
         # self.fc3 = nn.Linear(512, 200)
@@ -30,12 +30,12 @@ class Conv(nn.Module):
 
     def forward(self, positions):
         positions = F.relu(self.conv1(positions))
-        positions = self.maxpool(positions)
+        # positions = self.maxpool(positions)
         positions = F.relu(self.conv2(positions))
-        positions = self.maxpool(positions)
+        # positions = self.maxpool(positions)
         positions = F.relu(self.conv3(positions))
         # positions = self.maxpool(positions)
-        # positions = F.relu(self.conv4(positions))
+        #positions = F.relu(self.conv4(positions))
         # positions = self.maxpool(positions)
         # positions = F.relu(self.conv5(positions))
         # positions = self.maxpool(positions)
