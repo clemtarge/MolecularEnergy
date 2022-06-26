@@ -14,7 +14,7 @@ class Conv(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.flatten = nn.Flatten()
 
-        self.fc1 = nn.Linear(800, 200)
+        self.fc1 = nn.Linear(256, 200)
         self.fc2 = nn.Linear(200, 100)
         self.fc3 = nn.Linear(100, 1)
 
